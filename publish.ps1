@@ -10,10 +10,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $false
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $patchPath = Join-Path $env:USERPROFILE '.dsh\profiles\desktop\cordis.patch.yml'
-$placeholder = 'https://cdn.jsdelivr.net/gh/Zuibai433/123@main/index.json'
 
 if ($Repo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw "Repo must be owner/name: $Repo" }
 
@@ -36,8 +36,9 @@ try {
 Write-Host '== 3/4 push to GitHub ==' -ForegroundColor Cyan
 Push-Location $here
 try {
-  git remote remove origin 2>$null
-  git remote add origin "https://github.com/$Repo.git"
+  $remotes = @(git remote)
+  if ($remotes -contains 'origin') { git remote set-url origin "https://github.com/$Repo.git" }
+  else { git remote add origin "https://github.com/$Repo.git" }
   git push -u origin $Branch
   if ($LASTEXITCODE -ne 0) { throw 'push failed: log in to git and create the GitHub repo first' }
 } finally { Pop-Location }
@@ -47,7 +48,8 @@ $url = "https://cdn.jsdelivr.net/gh/$Repo@$Branch/index.json"
 if (-not (Test-Path $patchPath)) { throw "profile patch not found: $patchPath" }
 Copy-Item $patchPath "$patchPath.bak-$(Get-Date -Format yyyyMMddHHmmss)" -Force
 $yaml = [System.IO.File]::ReadAllText($patchPath, [System.Text.Encoding]::UTF8)
-if (-not $yaml.Contains($placeholder)) { throw "placeholder line not found, set plugin-market.indexes to $url manually" }
-[System.IO.File]::WriteAllText($patchPath, $yaml.Replace($placeholder, $url), (New-Object System.Text.UTF8Encoding($false)))
+$pattern = 'https://cdn\.jsdelivr\.net/gh/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+/index\.json'
+if ($yaml -notmatch $pattern) { throw "no jsdelivr index URL in $patchPath; set plugin-market.indexes to $url manually" }
+[System.IO.File]::WriteAllText($patchPath, [regex]::Replace($yaml, $pattern, $url), (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "   indexes: $url" -ForegroundColor Green
 Write-Host 'Restart the DSH desktop app, then Plugins -> Discover.'
