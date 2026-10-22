@@ -61,3 +61,11 @@ DSH 的 `plugin-market` 只接受 http(s)、无凭据、无 fragment 的绝对 U
 
 DSH 桌面端 → Plugins → Discover → 「已添加的索引源 / Index sources」→ 填 URL → 添加。
 界面写入与 `cordis.patch.yml` 是同一份存储（Settings 通过 profile 的 Cordis patch 持久化），二者等价。
+
+## 方案 B：放进已有仓库
+已有历史的仓库可先 clone，再将 `index.json` 提交并推送：
+
+```powershell
+.\publish-existing.ps1 -Repo Zuibai433/123
+```
+注意：repo 必须 public，否则 jsDelivr 404；jsDelivr 首次回源可能有几秒延迟。

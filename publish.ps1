@@ -10,14 +10,15 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $patchPath = Join-Path $env:USERPROFILE '.dsh\profiles\desktop\cordis.patch.yml'
-$placeholder = 'https://cdn.jsdelivr.net/gh/YOUR-GITHUB-USER/ai-plugin-market@main/index.json'
+$placeholder = 'https://cdn.jsdelivr.net/gh/Zuibai433/123@main/index.json'
 
 if ($Repo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw "Repo must be owner/name: $Repo" }
 
 Write-Host '== 1/4 validate index.json ==' -ForegroundColor Cyan
-$doc = Get-Content -Raw (Join-Path $here 'index.json') | ConvertFrom-Json
+$doc = [System.IO.File]::ReadAllText((Join-Path $here 'index.json'), [System.Text.Encoding]::UTF8) | ConvertFrom-Json
 if ($doc.format -ne 1) { throw 'format must be 1' }
 if (-not $doc.plugins -or $doc.plugins.Count -eq 0) { throw 'plugins must not be empty' }
 Write-Host ('   ok: {0} plugins' -f $doc.plugins.Count) -ForegroundColor Green
@@ -45,8 +46,8 @@ Write-Host '== 4/4 point DSH search source at it ==' -ForegroundColor Cyan
 $url = "https://cdn.jsdelivr.net/gh/$Repo@$Branch/index.json"
 if (-not (Test-Path $patchPath)) { throw "profile patch not found: $patchPath" }
 Copy-Item $patchPath "$patchPath.bak-$(Get-Date -Format yyyyMMddHHmmss)" -Force
-$yaml = Get-Content -Raw $patchPath
+$yaml = [System.IO.File]::ReadAllText($patchPath, [System.Text.Encoding]::UTF8)
 if (-not $yaml.Contains($placeholder)) { throw "placeholder line not found, set plugin-market.indexes to $url manually" }
-Set-Content -Path $patchPath -Value $yaml.Replace($placeholder, $url) -Encoding utf8
+[System.IO.File]::WriteAllText($patchPath, $yaml.Replace($placeholder, $url), (New-Object System.Text.UTF8Encoding($false)))
 Write-Host "   indexes: $url" -ForegroundColor Green
 Write-Host 'Restart the DSH desktop app, then Plugins -> Discover.'
